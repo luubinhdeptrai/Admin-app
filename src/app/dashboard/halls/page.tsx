@@ -13,14 +13,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -170,6 +162,16 @@ export default function HallsPage() {
     hall.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Group halls by cinema
+  const hallsByCinema = filteredHalls.reduce((acc, hall) => {
+    const cinemaId = hall.cinemaId;
+    if (!acc[cinemaId]) {
+      acc[cinemaId] = [];
+    }
+    acc[cinemaId].push(hall);
+    return acc;
+  }, {} as Record<string, Hall[]>);
+
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
       STANDARD: 'bg-gray-100 text-gray-700',
@@ -227,102 +229,113 @@ export default function HallsPage() {
         <CardHeader>
           <CardTitle>All Halls ({filteredHalls.length})</CardTitle>
           <CardDescription>
-            A list of all cinema halls in your system
+            Halls organized by cinema location
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Hall Name</TableHead>
-                <TableHead>Cinema</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Capacity</TableHead>
-                <TableHead>Features</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    Loading...
-                  </TableCell>
-                </TableRow>
-              ) : filteredHalls.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    No halls found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredHalls.map((hall) => {
-                  const cinema = cinemas.find((c) => c.id === hall.cinemaId);
-                  return (
-                    <TableRow key={hall.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <DoorOpen className="h-4 w-4 text-gray-400" />
-                          <span className="font-medium">{hall.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{cinema?.name || 'Unknown'}</TableCell>
-                      <TableCell>
-                        <Badge className={getTypeColor(hall.type)}>
-                          {hall.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <div className="font-medium">{hall.capacity} seats</div>
-                          <div className="text-gray-500">{hall.rows} rows</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <div>{hall.screenType || 'Standard'}</div>
-                          <div className="text-gray-500">
-                            {hall.soundSystem || 'Standard Audio'}
+        <CardContent className="space-y-8">
+          {loading ? (
+            <div className="text-center py-8">Loading...</div>
+          ) : Object.keys(hallsByCinema).length === 0 ? (
+            <div className="text-center py-8">No halls found</div>
+          ) : (
+            Object.entries(hallsByCinema).map(([cinemaId, cinemaHalls]) => {
+              const cinema = cinemas.find((c) => c.id === cinemaId);
+              return (
+                <div key={cinemaId} className="space-y-4">
+                  {/* Cinema Header */}
+                  <div className="flex items-center gap-3 pb-3 border-b-2 border-purple-100">
+                    <div className="p-2 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg">
+                      <DoorOpen className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">{cinema?.name || 'Unknown Cinema'}</h3>
+                      <p className="text-sm text-gray-500">{cinema?.location || ''} • {cinemaHalls.length} halls</p>
+                    </div>
+                  </div>
+
+                  {/* Halls Grid */}
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {cinemaHalls.map((hall) => (
+                      <Card key={hall.id} className="border-0 shadow-md hover:shadow-xl transition-all hover:-translate-y-1">
+                        <CardContent className="p-5">
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <DoorOpen className="h-4 w-4 text-purple-600" />
+                                <h4 className="font-bold text-lg">{hall.name}</h4>
+                              </div>
+                              <Badge className={getTypeColor(hall.type)}>
+                                {hall.type}
+                              </Badge>
+                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => openEditDialog(hall)}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setSelectedHall(hall);
+                                    setDeleteDialogOpen(true);
+                                  }}
+                                  className="text-red-600"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(hall.status)}>
-                          {hall.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEditDialog(hall)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedHall(hall);
-                                setDeleteDialogOpen(true);
-                              }}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-600">Capacity</span>
+                              <span className="font-semibold">{hall.capacity} seats</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-600">Rows</span>
+                              <span className="font-semibold">{hall.rows} rows</span>
+                            </div>
+                            <div className="pt-2 border-t">
+                              <div className="text-gray-600 mb-1">Screen</div>
+                              <div className="font-medium">{hall.screenType || 'Standard'}</div>
+                            </div>
+                            <div>
+                              <div className="text-gray-600 mb-1">Audio</div>
+                              <div className="font-medium">{hall.soundSystem || 'Standard Audio'}</div>
+                            </div>
+                            {hall.features && hall.features.length > 0 && (
+                              <div>
+                                <div className="text-gray-600 mb-1">Features</div>
+                                <div className="flex flex-wrap gap-1">
+                                  {hall.features.map((feature, idx) => (
+                                    <Badge key={idx} variant="outline" className="text-xs">
+                                      {feature}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            <div className="pt-2">
+                              <Badge className={getStatusColor(hall.status)}>
+                                {hall.status}
+                              </Badge>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              );
+            })
+          )}
         </CardContent>
       </Card>
 
