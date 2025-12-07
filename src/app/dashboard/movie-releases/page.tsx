@@ -11,17 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -35,6 +25,7 @@ import api from '@/lib/api';
 import type { Movie } from '@/types';
 import { format } from 'date-fns';
 import { mockMovies, mockReleases } from '@/lib/mockData';
+import MovieReleaseDialog from '@/components/forms/MovieReleaseDialog';
 
 interface MovieRelease {
   id: string;
@@ -45,25 +36,12 @@ interface MovieRelease {
   note: string;
 }
 
-interface CreateMovieReleaseDto {
-  movieId: string;
-  startDate: string;
-  endDate: string;
-  note: string;
-}
-
 export default function MovieReleasesPage() {
   const [releases, setReleases] = useState<MovieRelease[]>([]);
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRelease, setEditingRelease] = useState<MovieRelease | null>(null);
-  const [formData, setFormData] = useState<CreateMovieReleaseDto>({
-    movieId: '',
-    startDate: '',
-    endDate: '',
-    note: '',
-  });
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -101,46 +79,8 @@ export default function MovieReleasesPage() {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!formData.movieId || !formData.startDate || !formData.endDate || !formData.note) {
-      toast({
-        title: 'Error',
-        description: 'All fields are required',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      if (editingRelease) {
-        // Update existing release
-        await api.put(`/movie-releases/${editingRelease.id}`, formData);
-        toast({ title: 'Success', description: 'Release updated successfully' });
-      } else {
-        // Create new release
-        await api.post('/movie-releases', formData);
-        toast({ title: 'Success', description: 'Release created successfully' });
-      }
-      setDialogOpen(false);
-      fetchData();
-      resetForm();
-    } catch {
-      toast({
-        title: 'Error',
-        description: editingRelease ? 'Failed to update release' : 'Failed to create release',
-        variant: 'destructive',
-      });
-    }
-  };
-
   const handleEdit = (release: MovieRelease) => {
     setEditingRelease(release);
-    setFormData({
-      movieId: release.movieId,
-      startDate: release.startDate,
-      endDate: release.endDate,
-      note: release.note,
-    });
     setDialogOpen(true);
   };
 
@@ -160,16 +100,6 @@ export default function MovieReleasesPage() {
         variant: 'destructive',
       });
     }
-  };
-
-  const resetForm = () => {
-    setEditingRelease(null);
-    setFormData({
-      movieId: '',
-      startDate: '',
-      endDate: '',
-      note: '',
-    });
   };
 
   const getMovieById = (movieId: string) => {
@@ -229,7 +159,7 @@ export default function MovieReleasesPage() {
         </div>
         <Button
           onClick={() => {
-            resetForm();
+            setEditingRelease(null);
             setDialogOpen(true);
           }}
           className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
@@ -303,7 +233,7 @@ export default function MovieReleasesPage() {
               <p className="text-gray-500 mb-4">No movie releases found. Add your first release schedule.</p>
               <Button
                 onClick={() => {
-                  resetForm();
+                  setEditingRelease(null);
                   setDialogOpen(true);
                 }}
                 className="bg-gradient-to-r from-purple-600 to-pink-600"
@@ -444,93 +374,20 @@ export default function MovieReleasesPage() {
       </div>
 
       {/* Add/Edit Release Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{editingRelease ? 'Edit Release' : 'Add New Release'}</DialogTitle>
-            <DialogDescription>
-              {editingRelease ? 'Update release schedule details' : 'Create a new movie release schedule'}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="movieId">Movie *</Label>
-              <Select
-                value={formData.movieId}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, movieId: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select movie" />
-                </SelectTrigger>
-                <SelectContent>
-                  {movies.map((movie) => (
-                    <SelectItem key={movie.id} value={movie.id}>
-                      {movie.title} ({movie.runtime} mins)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="startDate">Start Date *</Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={formData.startDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, startDate: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="endDate">End Date *</Label>
-                <Input
-                  id="endDate"
-                  type="date"
-                  value={formData.endDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, endDate: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="note">Note *</Label>
-              <Textarea
-                id="note"
-                value={formData.note}
-                onChange={(e) =>
-                  setFormData({ ...formData, note: e.target.value })
-                }
-                placeholder="e.g., Phát hành dịp Tết Nguyên Đán 2025"
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setDialogOpen(false);
-                resetForm();
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              className="bg-gradient-to-r from-purple-600 to-pink-600"
-            >
-              {editingRelease ? 'Update Release' : 'Create Release'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <MovieReleaseDialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setEditingRelease(null);
+          }
+        }}
+        movies={movies}
+        editingRelease={editingRelease}
+        onSuccess={() => {
+          fetchData();
+        }}
+      />
     </div>
   );
 }

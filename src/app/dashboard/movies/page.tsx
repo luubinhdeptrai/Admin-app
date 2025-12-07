@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Search, MoreVertical, Edit, Trash2, Film as FilmIcon } from 'lucide-react';
+import { Plus, Search, MoreVertical, Edit, Trash2, Film as FilmIcon, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -40,6 +40,7 @@ import { useToast } from '@/components/ui/use-toast';
 import api from '@/lib/api';
 import type { Movie, AgeRating, LanguageType, MovieCast, CreateMovieDto } from '@/types';
 import Image from 'next/image';
+import MovieReleaseDialog from '@/components/forms/MovieReleaseDialog';
 
 import { mockMovies, mockGenres } from '@/lib/mockData'; // ⭐️ Import mock data
 
@@ -50,7 +51,9 @@ export default function MoviesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [addReleaseDialogOpen, setAddReleaseDialogOpen] = useState(false);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
+  const [selectedMovieIdForRelease, setSelectedMovieIdForRelease] = useState<string>('');
   const [formData, setFormData] = useState<Partial<CreateMovieDto>>({
     title: '',
     overview: '',
@@ -76,6 +79,7 @@ export default function MoviesPage() {
 
   useEffect(() => {
     fetchMovies();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchMovies = async () => {
@@ -263,6 +267,15 @@ export default function MoviesPage() {
                       <DropdownMenuItem onClick={() => openEditDialog(movie)}>
                         <Edit className="mr-2 h-4 w-4" />
                         Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setSelectedMovieIdForRelease(movie.id);
+                          setAddReleaseDialogOpen(true);
+                        }}
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Add Release
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => {
@@ -629,6 +642,22 @@ export default function MoviesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Add Release Dialog */}
+      <MovieReleaseDialog
+        open={addReleaseDialogOpen}
+        onOpenChange={(open) => {
+          setAddReleaseDialogOpen(open);
+          if (!open) {
+            setSelectedMovieIdForRelease('');
+          }
+        }}
+        movies={movies}
+        preSelectedMovieId={selectedMovieIdForRelease}
+        onSuccess={() => {
+          // Optionally refresh data or show success message
+        }}
+      />
     </div>
   );
 }
